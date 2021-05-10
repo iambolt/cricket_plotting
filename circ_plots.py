@@ -3,6 +3,7 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
+import dash_table
 import plotly.express as px  
 import dash 
 import dash_core_components as dcc
@@ -14,7 +15,7 @@ from dash.dependencies import Input, Output
 
 
 
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.SLATE])
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.SANDSTONE])
 server = app.server
 
 
@@ -222,7 +223,8 @@ top_card = dbc.Card(
     [
         dbc.CardImg(src=app.get_asset_url('ben.jpg'), top=True),
         dbc.CardBody(
-            html.P("Kohli", className="card-text")
+            html.P("Kohli DOB:19 feab Indian", className="card-text"),
+
         ),
     ],
     
@@ -236,7 +238,7 @@ app.layout = dbc.Container(
 
                     dbc.Row([
                         dbc.Col([
-                            html.H1("Batter Performance Analytics"),
+                            html.H1("Batter Striking Zone Analytics"),
                             html.H5(html.Em("Nishant Singh Siddhu")),         
                         ],style={'text-align': 'center'})    
                         ]),
@@ -282,9 +284,9 @@ app.layout = dbc.Container(
 
 
                 dbc.Col([
-                    dbc.Button("Analyze", id="analyze_btn", color="success",
-                               n_clicks='0',size="lg")
-                ],width=4, style={'padding-top':'25px'})
+                    dbc.Button("Analyze", id="analyze_btn",
+                               n_clicks='0')
+                ],width=4, style={'padding-top':'20px'})
         
             ],justify="start",
         ),
@@ -300,39 +302,84 @@ app.layout = dbc.Container(
         html.Div([
             dbc.Row([
                 dbc.Col([dbc.Card(top_card)],
-                width=2
+                width=1
                        ),
 
                 dbc.Col([
                     dbc.Spinner(
-                        dcc.Graph(id='display'),
+                        dcc.Graph(id='display_striking_points'),
                         color="dark"),
-                        ], width=5
+                        ], width=7
                        ),
 
                 dbc.Col([
 
                     dbc.Spinner(
-                        dcc.Graph(id='dis'),
+                        dcc.Graph(id='dsiplay_scoring_areas'),
                         color="dark"),
-                        ], width=5  
+                        ], width=4  
                        )
 
         ],justify="start"),
 
 
-            ])
-        
+            ]),
 
-    
-    ],
+        html.Div([
+            dbc.Row([
+
+                dbc.Col([
+                    dbc.Spinner(
+                        dcc.Graph(id='display_zone_SR',style={'height': '80vh'})
+                        ),
+                        ], width=6,style={'padding-top':'20px'}
+                       ),
+
+                dbc.Col([
+
+                    dbc.Spinner(
+                        dcc.Graph(id='display_zone_runs',style={'height': '80vh'})
+                        ),
+                        ], width=6, style={'padding-top':'20px'}  
+                       )
+
+        ],justify="start"),
+
+
+            ]),
+        html.Div([
+            dbc.Row([
+                dbc.Col([
+                    dbc.Spinner(
+                        dcc.Graph(id='display_dismissals')
+                        ),
+                        ], width=6, style={'padding-top':'20px'}  
+                       ),
+
+
+                dbc.Col(html.Div(id='team-data')),                
+
+
+
+
+                ],justify="start"),
+            ]),
+
+
+
+            ],
     fluid=True
 )
 
-
+# app.get_asset_url('pitch.PNG')
 @app.callback(
-    [Output('display', 'figure'),
-    Output('dis', 'figure')],
+    [Output('display_striking_points', 'figure'),
+    Output('dsiplay_scoring_areas', 'figure'),
+    Output('display_zone_SR', 'figure'),
+    Output('display_zone_runs', 'figure'),
+    Output('display_dismissals', 'figure'),
+    Output('team-data', 'children'),
+    ],
     [
         Input('dd_player', 'value'),
         Input('dd_matches', 'value'),
@@ -350,7 +397,7 @@ def display_plot(dd_player,analyze_btn,dd_matches):
 
 
         fig = go.Figure()
-        # Add image
+    # Add image
         img_width = 432
         img_height = 264
         fig.add_layout_image(
@@ -380,42 +427,136 @@ def display_plot(dd_player,analyze_btn,dd_matches):
 
         fig.add_vrect(
             x0=202, x1=237,
-            fillcolor="LightSalmon", opacity=0.23,
+            fillcolor="LightSalmon", opacity=0.3,
             layer="above", line_width=0,
         ),
         fig.add_vrect(
             x0=237, x1=279,
-            fillcolor="turquoise", opacity=0.23,
+            fillcolor="turquoise", opacity=0.3,
             layer="above", line_width=0,
         ),
 
 
         fig.add_vrect(
             x0=167, x1=202,
-            fillcolor="LightSeaGreen", opacity=0.23,
+            fillcolor="LightSeaGreen", opacity=0.3,
             layer="above", line_width=0,
         ),
 
         fig.add_vrect(
             x0=132, x1=167,
-            fillcolor="lightgoldenrodyellow", opacity=0.23,
+            fillcolor="lightgoldenrodyellow", opacity=0.3,
             layer="above", line_width=0,
         ),
 
         fig.add_vrect(
             x0=90, x1=132,
-            fillcolor="goldenrod", opacity=0.23,
+            fillcolor="goldenrod", opacity=0.3,
             layer="above", line_width=0,
         ),
 
+        fig.add_annotation(
+                x=112,
+                y=250,
+                xref="x",
+                yref="y",
+                text="Zone1",
+                showarrow=False,
+                font=dict(
+                    family="Courier New, monospace",
+                    size=16,
+                    color="#ffffff"
+                    ),
+                align="center",
+                bordercolor="#c7c7c7",
+                borderwidth=2,
+                borderpad=4,
+                bgcolor="#ff7f0e",
+                opacity=0.8
+                )
+
+        fig.add_annotation(
+                x=149,
+                y=250,
+                xref="x",
+                yref="y",
+                text="Zone2",
+                showarrow=False,
+                font=dict(
+                    family="Courier New, monospace",
+                    size=16,
+                    color="#ffffff"
+                    ),
+                align="center",
+                bordercolor="#c7c7c7",
+                borderwidth=2,
+                borderpad=4,
+                bgcolor="#ff7f0e",
+                opacity=0.8
+                )
+
+        fig.add_annotation(
+                x=185,
+                y=250,
+                xref="x",
+                yref="y",
+                text="Zone3",
+                showarrow=False,
+                font=dict(
+                    family="Courier New, monospace",
+                    size=16,
+                    color="#ffffff"
+                    ),
+                align="center",
+                bordercolor="#c7c7c7",
+                borderwidth=2,
+                borderpad=4,
+                bgcolor="#ff7f0e",
+                opacity=0.8
+                )
+
+        fig.add_annotation(
+                x=220,
+                y=250,
+                xref="x",
+                yref="y",
+                text="Zone4",
+                showarrow=False,
+                font=dict(
+                    family="Courier New, monospace",
+                    size=16,
+                    color="#ffffff"
+                    ),
+                align="center",
+                bordercolor="#c7c7c7",
+                borderwidth=2,
+                borderpad=4,
+                bgcolor="#ff7f0e",
+                opacity=0.8
+                )
+
+        fig.add_annotation(
+                x=258,
+                y=250,
+                xref="x",
+                yref="y",
+                text="Zone5",
+                showarrow=False,
+                font=dict(
+                    family="Courier New, monospace",
+                    size=16,
+                    color="#ffffff"
+                    ),
+                align="center",
+                bordercolor="#c7c7c7",
+                borderwidth=2,
+                borderpad=4,
+                bgcolor="#ff7f0e",
+                opacity=0.8
+                )
 
 
-
-        fig.update_layout(title= "SSup",template="plotly_dark",margin=dict(r=0, l=0, t=0, b=0))
-
-        #visible=False,    PaleTurquoise
-        fig.show(config={'doubleClick': 'reset'})    
-
+        fig.update_layout(template="ggplot2",margin=dict(r=0, l=0, t=0, b=0))
 
 
 
@@ -424,7 +565,7 @@ def display_plot(dd_player,analyze_btn,dd_matches):
             r=list(p.iloc[0]),
             theta=[22.5, 67.5, 112.5, 157.5, 202.5, 247.5, 292.5,337.5],
             width=list(p.iloc[1]),
-            marker_color=["#E4FF87", '#709BFF', '#EF553B', '#FFA15A', '#AB63FA', '#FF6692', '#B6FFB4','#B6E880'],
+            marker_color=px.colors.diverging.Earth,
             marker_line_color="black",
             marker_line_width=2,
             opacity=0.8
@@ -432,7 +573,7 @@ def display_plot(dd_player,analyze_btn,dd_matches):
 
 
         fig2.update_layout(
-                template="plotly_dark",
+                template="ggplot2",
                 title = 'Scoring areas',
                 showlegend = False,
                 polar = dict(
@@ -441,12 +582,47 @@ def display_plot(dd_player,analyze_btn,dd_matches):
                 )
             )
         
+        fig3 = px.bar(s, x='SR', y='Zones',text='Zones',orientation='h',color='SR',color_continuous_scale=px.colors.diverging.Earth,
+                template= "ggplot2",title='Zone-Wise Strike rates')
+        fig3.update_yaxes(title='Zones', visible=True, showticklabels=False)
+        fig3.update_traces( textposition='inside', opacity=0.8, textfont_color='ghostwhite')
+
+        fig4 = px.bar(r, x='Runs', y='Zones',text='Zones',color='Runs',color_continuous_scale=px.colors.diverging.Earth,orientation='h',
+                template= "ggplot2",title='Zone-Wise Runs scored')
+        fig4.update_yaxes(title='Zones', visible=True, showticklabels=False)
+
+        fig4.update_traces( textposition='inside', opacity=0.8, textfont_color='ghostwhite')
+
+        fig5 = px.pie(d, values=d.zones.value_counts().values, names=d.zones.unique(),
+                color_discrete_sequence=px.colors.diverging.Earth,template= "ggplot2")
+        fig5.update_traces(title='Dismissal Zones',textposition='inside', textinfo='percent+label')
 
 
 
+        data_note = []
 
-    return fig,fig2    
+        data_note.append(html.Div(dash_table.DataTable(
+        data= d.to_dict('records'),
+                columns= [{'name': x, 'id': x} for x in d],
+                    style_as_list_view=True,
+                    editable=False,
+                    style_table={
+                        'overflowY': 'scroll',
+                        'width': '100%',
+                        'minWidth': '100%',
+                    },
+                    style_header={
+                            'backgroundColor': '#f8f5f0',
+                            'fontWeight': 'bold'
+                        },
+                    style_cell={
+                            'textAlign': 'center',
+                            'padding': '8px',
+                        },
+                )))
 
+    
+    return fig,fig2,fig3,fig4,fig5,data_note 
 
 if __name__ == '__main__':
     app.run_server(debug=True,use_reloader=False)
