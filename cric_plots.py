@@ -15,7 +15,7 @@ from dash.dependencies import Input, Output
 
 
 
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.SANDSTONE])
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.LUX])
 server = app.server
 
 
@@ -107,6 +107,29 @@ def _cal_zone_strike_rate(dataframe):
     return strike_rate_df
 
 
+def _cal_probab(dataframe_dismissials, dataframe_final):
+    
+    list_probab = []
+    for i in dataframe_dismissials.zones.unique():
+        dismis = len(dataframe_dismissials.query(f'zones == "{i}"'))
+        tot = len(dataframe_final.query(f'zones== "{i}"'))
+        prob = dismis / tot
+        list_probab.append({i : prob})
+        
+    data_dismiss = pd.DataFrame.from_records(list_probab)
+
+
+    dum = pd.Series(np.diag(data_dismiss), index=[data_dismiss.index, data_dismiss.columns])
+
+    dum_1 = pd.DataFrame(dum, columns=['Probability'])
+    dum_1.reset_index(inplace=True)
+    dum_1.drop('level_0', axis=1, inplace=True)
+
+    dum_1.rename(columns={"level_1": "Zones"},inplace=True)
+    probab_df = dum_1.copy()
+    
+    return probab_df
+        
         
     
 def _zone_finder(dataframe):
@@ -135,7 +158,7 @@ def _zone_finder(dataframe):
     return zones
 
 
-def plotting_dfs():
+def plotting_dfs(size):
     ''' This function creates the dataframes required for plotting
         
         Returns EVENTS dataframe (columns = x coordinate ,y coordinate, Runs scored, zone in which the ball was delivered), 
@@ -148,12 +171,12 @@ def plotting_dfs():
    # with specific bound range and combining as dataframe
     
     list_y = []
-    for i in range(0,120):
+    for i in range(0,size):
         n = random.randint(0,190)
         list_y.append(n)
 
     list_x = []
-    for i in range(0,120):
+    for i in range(0,size):
         n = random.randint(90,260)
         list_x.append(n)
 
@@ -168,7 +191,7 @@ def plotting_dfs():
     
     event_col = []
     
-    for i in range(120):
+    for i in range(size):
         random_event = random.choices(events_color, events_distribution)
         event_col.append(random_event[0])
     
@@ -212,24 +235,13 @@ def plotting_dfs():
     
     
     dismissal_df = _cal_counts_dismissals(final_df)
+
+    probab_df = _cal_probab(dismissal_df,final_df)
+
     
-    return final_df, strike_rate_df, runs_df, barpolar_df, dismissal_df
+    return final_df, strike_rate_df, runs_df, barpolar_df, dismissal_df, probab_df
     
     
-
-
-
-top_card = dbc.Card(
-    [
-        dbc.CardImg(src=app.get_asset_url('ben.jpg'), top=True),
-        dbc.CardBody(
-            html.P("Kohli DOB:19 feab Indian", className="card-text"),
-
-        ),
-    ],
-    
-)
-
 
 
 app.layout = dbc.Container(
@@ -238,7 +250,7 @@ app.layout = dbc.Container(
 
                     dbc.Row([
                         dbc.Col([
-                            html.H1("Batter Striking Zone Analytics"),
+                            html.H1("Batter's Striking Zone Analytics"),
                             html.H5(html.Em("Nishant Singh Siddhu")),         
                         ],style={'text-align': 'center'})    
                         ]),
@@ -270,25 +282,21 @@ app.layout = dbc.Container(
 
 
                 dbc.Col([
-                    html.H5('Select last N matches'),
-                    dcc.Dropdown(
-                        id='dd_matches',
-                        options=[
-                            {'label': 'Last 5 matches', 'value': '5'},
-                            {'label': 'Last 7 matches', 'value': '7'},
-                            {'label': 'Last 10 matches', 'value': '10'}
-                        ],
-                        searchable=False
-                    ),
+                    html.H5('Select past N matches'),
+                    dcc.Slider(
+                    id='matches',
+                    min=5,
+                    max=15,
+                    value=5,
+                        marks={
+                            5: '5',
+                            10: '10',
+                            15: '15',
+                            },included=False),
                 ],width=4),
 
-
-                dbc.Col([
-                    dbc.Button("Analyze", id="analyze_btn",
-                               n_clicks='0')
-                ],width=4, style={'padding-top':'20px'})
         
-            ],justify="start",
+            ],justify="center",
         ),
 
 
@@ -301,15 +309,13 @@ app.layout = dbc.Container(
 
         html.Div([
             dbc.Row([
-                dbc.Col([dbc.Card(top_card)],
-                width=1
-                       ),
+
 
                 dbc.Col([
                     dbc.Spinner(
                         dcc.Graph(id='display_striking_points'),
                         color="dark"),
-                        ], width=7
+                        ], width=8
                        ),
 
                 dbc.Col([
@@ -332,7 +338,7 @@ app.layout = dbc.Container(
                     dbc.Spinner(
                         dcc.Graph(id='display_zone_SR',style={'height': '80vh'})
                         ),
-                        ], width=6,style={'padding-top':'20px'}
+                        ], width=6,style={'padding-top':'40px'}
                        ),
 
                 dbc.Col([
@@ -340,24 +346,45 @@ app.layout = dbc.Container(
                     dbc.Spinner(
                         dcc.Graph(id='display_zone_runs',style={'height': '80vh'})
                         ),
-                        ], width=6, style={'padding-top':'20px'}  
+                        ], width=6, style={'padding-top':'40px'}  
                        )
 
         ],justify="start"),
 
 
             ]),
+
+
+
+        html.Div([
+            dbc.Row([
+
+                dbc.Col([
+                    html.H5('Dismissal Likelihood Probability')],
+                    style={'padding-left': '900px', 'padding-top':'25px'}
+                    ),  
+
+        ]),
+
+
+            ]),
+
+
+
         html.Div([
             dbc.Row([
                 dbc.Col([
                     dbc.Spinner(
                         dcc.Graph(id='display_dismissals')
                         ),
-                        ], width=6, style={'padding-top':'20px'}  
+                        ], width=6,  
                        ),
 
 
-                dbc.Col(html.Div(id='team-data')),                
+                dbc.Col([
+                    html.Div(id='team-data')],
+                    style={'padding-top': '70px'}
+                    ),                
 
 
 
@@ -382,17 +409,64 @@ app.layout = dbc.Container(
     ],
     [
         Input('dd_player', 'value'),
-        Input('dd_matches', 'value'),
-        Input('analyze_btn', 'n_clicks'),
+        Input('matches', 'value'),
     ],
-    prevent_initial_call=True
+    prevent_initial_call=False
 )
 
-def display_plot(dd_player,analyze_btn,dd_matches):
+def display_plot(dd_player,dd_matches):
     
-    print(dd_player,analyze_btn,dd_matches)
-    if dd_player == 'RS':
-        f,s,r,p,d = plotting_dfs()
+    
+    print(dd_player,dd_matches)
+
+
+    if dd_player == None:
+        fig = px.scatter()
+        fig.add_annotation(x=2, y=2,font_size=40,font_color='Blue',
+            text="Select a Player",
+            showarrow=False,
+            yshift=10)
+        fig2 = px.scatter()
+        fig2.add_annotation(x=2, y=2,font_size=20,font_color='Blue',
+            text="Select a Player",
+            showarrow=False,
+            yshift=10)
+
+        fig3 = px.scatter()
+        fig3.add_annotation(x=2, y=2,font_size=40,font_color='Blue',
+            text="Select a Player",
+            showarrow=False,
+            yshift=10)
+        fig4 = px.scatter()
+        fig4.add_annotation(x=2, y=2,font_size=40,font_color='Blue',
+            text="Select a Player",
+            showarrow=False,
+            yshift=10)
+
+        fig5 = px.scatter()
+        fig5.add_annotation(x=2, y=2,font_size=40,font_color='Blue',
+            text="Select a Player",
+            showarrow=False,
+            yshift=10)
+
+        data_empty = {}
+        return fig,fig2,fig3,fig4,fig5,data_empty
+
+
+
+    s = 0
+    if dd_matches ==5:
+        s =100
+
+    elif dd_matches ==10:
+        s =130
+
+    elif dd_matches ==15:
+        s =150
+
+    print(s)
+    if dd_player == 'RS' or 'VK'or 'SD' or 'KL' or 'SI' or 'RP' or 'RV' or 'HP' or 'PJ':
+        f,s,r,p,d, prob = plotting_dfs(s)
         
 
 
@@ -556,7 +630,7 @@ def display_plot(dd_player,analyze_btn,dd_matches):
                 )
 
 
-        fig.update_layout(template="ggplot2",margin=dict(r=0, l=0, t=0, b=0))
+        fig.update_layout(template=None,margin=dict(r=0, l=0, t=0, b=0))
 
 
 
@@ -588,7 +662,7 @@ def display_plot(dd_player,analyze_btn,dd_matches):
         fig3.update_traces( textposition='inside', opacity=0.8, textfont_color='ghostwhite')
 
         fig4 = px.bar(r, x='Runs', y='Zones',text='Zones',color='Runs',color_continuous_scale=px.colors.diverging.Earth,orientation='h',
-                template= "ggplot2",title='Zone-Wise Runs scored')
+                template= 'ggplot2',title='Zone-Wise Runs scored')
         fig4.update_yaxes(title='Zones', visible=True, showticklabels=False)
 
         fig4.update_traces( textposition='inside', opacity=0.8, textfont_color='ghostwhite')
@@ -602,8 +676,8 @@ def display_plot(dd_player,analyze_btn,dd_matches):
         data_note = []
 
         data_note.append(html.Div(dash_table.DataTable(
-        data= d.to_dict('records'),
-                columns= [{'name': x, 'id': x} for x in d],
+        data= prob.to_dict('records'),
+                columns= [{'name': x, 'id': x} for x in prob],
                     style_as_list_view=True,
                     editable=False,
                     style_table={
@@ -621,9 +695,8 @@ def display_plot(dd_player,analyze_btn,dd_matches):
                         },
                 )))
 
-    
     return fig,fig2,fig3,fig4,fig5,data_note 
 
 if __name__ == '__main__':
     app.run_server(debug=True,use_reloader=False)
-  
+    
